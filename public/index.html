@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1412">
+<title>Run Check</title>
+<style>
+  :root {
+    --bg: #f5f6f4; --card: #ffffff; --text: #18201c; --muted: #5c6862; --line: #e2e6e3;
+    --go: #1f8a4c; --go-bg: #e3f4ea; --wait: #b26a00; --wait-bg: #fdf0da; --dont: #c0322b; --dont-bg: #fbe4e2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f1412; --card: #18201c; --text: #e9eeeb; --muted: #9aa7a0; --line: #2a3430;
+      --go: #4cc47f; --go-bg: #15301f; --wait: #f0a93b; --wait-bg: #33260f; --dont: #f06b63; --dont-bg: #3a1714;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 520px; margin: 0 auto; padding: 16px 16px 40px; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 12px; }
+  h1 { font-size: 20px; margin: 0; letter-spacing: -0.01em; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .controls { display: flex; gap: 8px; margin-bottom: 14px; }
+  select, button { font: inherit; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--text); padding: 10px 12px; }
+  select { flex: 1; min-width: 0; }
+  button { cursor: pointer; white-space: nowrap; }
+  button:active { transform: translateY(1px); }
+  .verdict { border-radius: 18px; padding: 20px; margin-bottom: 18px; }
+  .verdict.go { background: var(--go-bg); } .verdict.wait { background: var(--wait-bg); } .verdict.dont { background: var(--dont-bg); }
+  .big { font-size: 44px; font-weight: 800; line-height: 1; letter-spacing: -0.02em; margin: 4px 0 6px; }
+  .go .big { color: var(--go); } .wait .big { color: var(--wait); } .dont .big { color: var(--dont); }
+  .where { font-weight: 600; }
+  ul.reasons { list-style: none; padding: 0; margin: 14px 0 0; }
+  ul.reasons li { padding: 6px 0 6px 22px; position: relative; }
+  ul.reasons li::before { content: ""; position: absolute; left: 4px; top: 13px; width: 9px; height: 9px; border-radius: 50%; background: var(--go); }
+  ul.reasons li.wait::before { background: var(--wait); } ul.reasons li.dont::before { background: var(--dont); }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+  .stat { background: color-mix(in srgb, var(--card) 70%, transparent); border-radius: 10px; padding: 8px 10px; }
+  .stat b { display: block; font-size: 18px; }
+  h2 { font-size: 15px; margin: 22px 0 8px; }
+  .list { background: var(--card); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-top: 1px solid var(--line); cursor: pointer; }
+  .row:first-child { border-top: 0; }
+  .row .name { flex: 1; min-width: 0; }
+  .row .sub { color: var(--muted); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pill { font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 999px; }
+  .pill.go { background: var(--go-bg); color: var(--go); } .pill.wait { background: var(--wait-bg); color: var(--wait); } .pill.dont { background: var(--dont-bg); color: var(--dont); }
+  .slots { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .slot { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+  .slot .when { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; margin: 2px 0; }
+  .slot.go .when { color: var(--go); } .slot.wait .when { color: var(--wait); } .slot.dont .when { color: var(--dont); }
+  .strip { display: flex; gap: 3px; overflow-x: auto; margin-top: 12px; padding-bottom: 4px; scrollbar-width: thin; }
+  .hr { flex: 0 0 34px; text-align: center; font-size: 11px; color: var(--muted); }
+  .hr .bar { height: 26px; border-radius: 6px; margin-bottom: 3px; background: var(--go-bg); border: 2px solid transparent; }
+  .hr.wait .bar { background: var(--wait-bg); } .hr.dont .bar { background: var(--dont-bg); }
+  .hr.go .bar { background: color-mix(in srgb, var(--go) 35%, var(--go-bg)); }
+  .hr { cursor: pointer; }
+  .hr.now .bar { border-color: var(--text); }
+  .hr.sel .bar { outline: 2px solid var(--text); outline-offset: 1px; }
+  .hour-info { font-size: 13px; margin-top: 8px; padding: 8px 10px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); }
+  .hr.daybreak { margin-left: 10px; }
+  .legend { display: flex; gap: 12px; font-size: 12px; color: var(--muted); margin-top: 6px; flex-wrap: wrap; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+  details summary { cursor: pointer; color: var(--muted); font-size: 14px; margin-top: 10px; }
+  footer { margin-top: 28px; font-size: 12px; color: var(--muted); }
+  footer a { color: inherit; }
+  .error { background: var(--dont-bg); color: var(--dont); padding: 12px; border-radius: 10px; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Run Check</h1>
+    <span class="muted" id="updated"></span>
+  </header>
+
+  <div class="controls">
+    <select id="area" aria-label="Area"><option>Loading areas…</option></select>
+    <button id="locate" type="button">Use my location</button>
+  </div>
+
+  <div id="verdict" class="verdict"><div class="muted">Loading live conditions…</div></div>
+
+  <h2>Best time to run</h2>
+  <div id="plan" class="plan"><div class="muted">Loading forecast…</div></div>
+
+  <h2 id="betterTitle" hidden>Better places to run right now</h2>
+  <div class="list" id="better" hidden></div>
+
+  <details>
+    <summary>All 47 areas</summary>
+    <div class="list" id="all" style="margin-top:8px"></div>
+  </details>
+
+  <footer>
+    <p>“Feels like” is a heat index estimated from air temperature and humidity at the nearest station, not an official heat-stress (WBGT) reading. Listen to your body.</p>
+    <p>Data: 2-hour weather forecast, 24-hour weather forecast, 4-day weather outlook, air temperature, relative humidity, rainfall and PSI from the National Environment Agency via <a href="https://data.gov.sg" target="_blank" rel="noopener">data.gov.sg</a>, accessed <span id="accessed">—</span>. Licensed under the <a href="https://data.gov.sg/open-data-licence" target="_blank" rel="noopener">Singapore Open Data Licence v1.0</a>. Run Check is not affiliated with or endorsed by NEA or the Singapore Government.</p>
+  </footer>
+</main>
+
+<script src="core.js"></script>
+<script src="data.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const LABEL = { go: "GO", wait: "WAIT", dont: "DON'T" };
+const SUB = { go: "Good to run now", wait: "Hold off or go easy", dont: "Not a good time to run" };
+let data = null;
+let selected = null;
+
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+};
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const { dist } = window.RunCheckCore; // from core.js, shared with the server
+const time = (iso) => iso ? new Date(iso).toLocaleTimeString("en-SG", { hour: "numeric", minute: "2-digit" }) : "—";
+
+async function load() {
+  try {
+    data = await RunCheckData.getConditions();
+    render();
+    loadPlan(true);
+  } catch (e) {
+    if (data) {
+      // Keep showing the last good result; just flag that it's old.
+      $("updated").textContent = `Couldn't refresh · data from ${time(data.fetchedAt)}`;
+      return;
+    }
+    $("verdict").className = "verdict";
+    $("verdict").innerHTML = `<div class="error">${esc(e.message)}</div>`;
+  }
+}
+
+function render() {
+  const names = data.areas.map((a) => a.name).sort();
+  if (!selected || !names.includes(selected)) selected = store.get("area") || "Bishan";
+  if (!names.includes(selected)) selected = names[0];
+  $("area").innerHTML = names.map((n) => `<option ${n === selected ? "selected" : ""}>${esc(n)}</option>`).join("");
+
+  $("updated").textContent = `${data.stale ? "Delayed · data from" : "Updated"} ${time(data.fetchedAt)}`;
+  $("accessed").textContent = new Date(data.fetchedAt).toLocaleString("en-SG");
+
+  const a = data.areas.find((x) => x.name === selected);
+  const order = a.reasons.slice().sort((x, y) => ({ dont: 0, wait: 1, go: 2 }[x.level] - { dont: 0, wait: 1, go: 2 }[y.level]));
+  $("verdict").className = `verdict ${a.level}`;
+  $("verdict").innerHTML = `
+    <div class="muted">Should I run now in <span class="where">${esc(a.name)}</span>?</div>
+    <div class="big">${LABEL[a.level]}</div>
+    <div>${SUB[a.level]}</div>
+    <ul class="reasons">${order.map((r) => `<li class="${r.level}">${esc(r.text)}</li>`).join("")}</ul>
+    <div class="stats">
+      <div class="stat"><span class="muted">Feels like</span><b>${a.heat ?? "—"}°C</b></div>
+      <div class="stat"><span class="muted">Temp · RH</span><b>${a.tempC ?? "—"}° · ${a.humidity != null ? Math.round(a.humidity) : "—"}%</b></div>
+      <div class="stat"><span class="muted">24h PSI</span><b>${a.psi ?? "—"}</b></div>
+    </div>
+    <p class="muted" style="margin:12px 0 0">Forecast ${esc(data.forecastPeriod || "")} · readings from ${esc(a.stations.temp || "?")} and ${esc(a.stations.rain || "?")} rain gauge.</p>`;
+
+  // Better nearby: areas with a strictly better verdict (or cooler by 2°C+ at same verdict), nearest first.
+  const better = data.areas
+    .filter((x) => x.name !== a.name && (rank(x) < rank(a) || (rank(x) === rank(a) && dry(x) && x.heat != null && a.heat != null && x.heat <= a.heat - 2)))
+    .sort((x, y) => dist(a.location, x.location) - dist(a.location, y.location))
+    .slice(0, 5);
+  $("betterTitle").hidden = $("better").hidden = better.length === 0;
+  $("better").innerHTML = better.map(row).join("");
+  $("all").innerHTML = data.areas.map(row).join("");
+}
+
+const rank = (x) => ({ go: 0, wait: 1, dont: 2 }[x.level]);
+const dry = (x) => !x.reasons.some((r) => r.kind === "rain" && r.level !== "go");
+const row = (x) => `<div class="row" data-area="${esc(x.name)}">
+  <div class="name"><div>${esc(x.name)}</div><div class="sub">${esc(x.forecast || "")} · feels ${x.heat ?? "—"}°C${x.rainNow > 0 ? " · raining" : ""}</div></div>
+  <span class="pill ${x.level}">${LABEL[x.level]}</span></div>`;
+
+let planFor = null;
+async function loadPlan(force) {
+  if (!selected || (!force && planFor === selected)) return;
+  const area = (planFor = selected);
+  try {
+    const p = await RunCheckData.getPlan(area, data);
+    if (area === selected) renderPlan(p);
+  } catch (e) {
+    if (area !== selected) return; // a newer area was chosen; ignore this old failure
+    planFor = null;
+    $("plan").innerHTML = `<div class="error">${esc(e.message)}</div>`;
+  }
+}
+
+function renderPlan(p) {
+  const card = (title, b) => !b ? `<div class="slot"><div class="muted">${title}</div><div class="when">—</div><div class="muted">No running hours left</div></div>` : `
+    <div class="slot ${b.level}">
+      <div class="muted">${title}${b.level !== "go" ? " · least bad" : ""}</div>
+      <div class="when">${b.startsNow ? "Now" : esc(b.from)}–${esc(b.to)}</div>
+      <div class="muted">Feels ~${Math.round(b.heatRange[0])}${Math.round(b.heatRange[1]) !== Math.round(b.heatRange[0]) ? "–" + Math.round(b.heatRange[1]) : ""}°C · ${esc(b.forecast || "")}</div>
+    </div>`;
+  let prevDay = null;
+  planHours = p.hours;
+  const strip = p.hours.map((h, i) => {
+    const brk = prevDay && h.day !== prevDay; prevDay = h.day;
+    const lbl = h.isNow ? "now" : h.label.replace(/(am|pm)$/, (m) => m[0]);
+    return `<div class="hr ${h.level}${h.isNow ? " now" : ""}${brk ? " daybreak" : ""}" data-i="${i}" role="button" tabindex="0" title="${esc(hourText(h))}">
+      <div class="bar"></div>${esc(lbl)}${brk ? "<br><b>tmr</b>" : ""}</div>`;
+  }).join("");
+  $("plan").innerHTML = `
+    <div class="slots">${card("Today", p.best.today)}${card("Tomorrow", p.best.tomorrow)}</div>
+    <div class="strip">${strip}</div>
+    <div class="legend"><span><i style="background:var(--go)"></i>Go</span><span><i style="background:var(--wait)"></i>Wait</span><span><i style="background:var(--dont)"></i>Don't</span></div>
+    <div id="hourInfo" class="hour-info">Tap an hour for details</div>
+    <p class="muted" style="margin:8px 0 0">${esc(p.note)}</p>`;
+  // Keep the hour the user tapped selected across the automatic refresh.
+  const keep = p.hours.findIndex((h) => h.start === selectedHour);
+  if (keep >= 0) showHour(document.querySelector(`.hr[data-i="${keep}"]`));
+}
+
+function choose(name) {
+  selected = name;
+  store.set("area", name);
+  render();
+  loadPlan();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+$("area").addEventListener("change", (e) => choose(e.target.value));
+let planHours = [];
+let selectedHour = null; // `start` of the tapped hour
+const hourText = (h) => `${h.day === "today" ? "Today" : "Tomorrow"} ${h.label}: ${LABEL[h.level]} · feels ~${h.heat}°C (${h.tempC}°, ${h.humidity}% RH) · ${h.forecast || "no forecast"} — ${h.source}`;
+function showHour(el) {
+  const h = planHours[Number(el.dataset.i)];
+  if (!h) return;
+  document.querySelectorAll(".hr.sel").forEach((x) => x.classList.remove("sel"));
+  el.classList.add("sel");
+  selectedHour = h.start;
+  $("hourInfo").textContent = hourText(h);
+}
+document.addEventListener("click", (e) => {
+  const hr = e.target.closest(".hr");
+  if (hr) return showHour(hr);
+  const r = e.target.closest(".row");
+  if (r && data) choose(r.dataset.area);
+});
+document.addEventListener("keydown", (e) => { const hr = e.target.closest && e.target.closest(".hr"); if (hr && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); showHour(hr); } });
+
+$("locate").addEventListener("click", () => {
+  if (!navigator.geolocation) return alert("Location isn't available in this browser — pick your area instead.");
+  $("locate").textContent = "Locating…";
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      $("locate").textContent = "Use my location";
+      if (!data) return;
+      const me = { latitude: pos.coords.latitude, longitude: pos.coords.longitude };
+      const near = data.areas.reduce((b, x) => (dist(me, x.location) < dist(me, b.location) ? x : b));
+      choose(near.name);
+    },
+    () => { $("locate").textContent = "Use my location"; alert("Couldn't get your location — pick your area from the list."); },
+    { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+  );
+});
+
+load();
+setInterval(load, 120000);
+</script>
+</body>
+</html>
